@@ -1,0 +1,89 @@
+# bitbucket-pipelines.yml 
+# Repo variables: AWS_DEFAULT_REGION, AWS_ACCOUNT_ID, ECR_REPO_NAME, 
+#                 ECS_CLUSTER, CONTAINER_NAME 
+# Deployment env (Production): AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, 
+#                              ECS_SERVICE_NAME, TASK_DEFINITION_FAMILY, APP_ENV 
+ 
+image: node:20-alpine 
+ 
+definitions: 
+  steps: 
+    - step: &build-and-push 
+        name: Build and push to ECR 
+        image: atlassian/default-image:4 
+        caches: 
+          - docker 
+        script: 
+          - export IMAGE_TAG=$BITBUCKET_COMMIT 
+          - export 
+ECR_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com 
+          - export FULL_IMAGE=${ECR_URI}/${ECR_REPO_NAME}:${IMAGE_TAG} 
+          - aws ecr get-login-password --region $AWS_DEFAULT_REGION | 
+            docker login --username AWS --password-stdin $ECR_URI 
+          - docker build -t $FULL_IMAGE . 
+          - docker push $FULL_IMAGE 
+          - echo $FULL_IMAGE > image-uri.txt 
+        artifacts: 
+          - image-uri.txt 
+        services: 
+          - docker 
+ 
+    - step: &deploy-ecs 
+        name: Deploy to ECS 
+        image: amazon/aws-cli 
+        deployment: Production 
+        script: 
+          - export IMAGE_URI=$(cat image-uri.txt) 
+          # Fetch current task definition 
+          - aws ecs describe-task-definition --task-definition 
+$TASK_DEFINITION_FAMILY 
+            --query taskDefinition > task-def.json 
+          # Update image in task definition JSON 
+          - | 
+            python3 - <<'PY' 
+            import json, os 
+            with open('task-def.json') as f: td = json.load(f) 
+            for c in td['containerDefinitions']: 
+              if c['name'] == os.environ['CONTAINER_NAME']: 
+                c['image'] = os.environ['IMAGE_URI'] 
+                c['environment'] = 
+[{'name':'APP_ENV','value':os.environ['APP_ENV']}] 
+            # Remove fields not accepted by register-task-definition 
+            for k in 
+['taskDefinitionArn','revision','status','requiresAttributes', 
+                      'compatibilities','registeredAt','registeredBy']: 
+  AWS ECS - End-to-End Production Deployment Guide DevOps | AWS Cloud   
+  #AWS #ECS #DevOps #CloudEngineering #Docker #Microservices 
+              td.pop(k, None) 
+            with open('new-task-def.json','w') as f: json.dump(td, f) 
+            PY 
+          # Register new task definition revision 
+          - NEW_TD_ARN=$(aws ecs register-task-definition 
+            --cli-input-json file://new-task-def.json 
+            --query 'taskDefinition.taskDefinitionArn' --output text) 
+          # Update ECS service 
+          - aws ecs update-service 
+            --cluster $ECS_CLUSTER 
+            --service $ECS_SERVICE_NAME 
+            --task-definition $NEW_TD_ARN 
+            --force-new-deployment 
+          # Wait for rollout to complete 
+          - aws ecs wait services-stable 
+            --cluster $ECS_CLUSTER 
+            --services $ECS_SERVICE_NAME 
+          - echo "Deployment complete - $NEW_TD_ARN" 
+ 
+pipelines: 
+  branches: 
+    main: 
+      - step: *build-and-push 
+      - step: *deploy-ecs 
+ 
+  pull-requests: 
+    '**': 
+      - step: 
+          name: Build and lint only 
+          script: 
+            - docker build -t test-build . 
+          services: 
+            - docker
