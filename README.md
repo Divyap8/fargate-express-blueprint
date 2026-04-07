@@ -47,6 +47,7 @@ ECS_CLUSTER = node-api-cluster
 
 CONTAINER_NAME = node-api-container
 
+
 **Production Deployment Variables** *(mark AWS keys as secret)*:
 
 AWS_ACCESS_KEY_ID = AKIA...
