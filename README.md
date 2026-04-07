@@ -1,2 +1,58 @@
 # fargate-express-blueprint
-A production-ready Node.js REST API deployed on AWS ECS Fargate behind an internal ALB, exposed via API Gateway + VPC Link. Includes a full CI/CD pipeline using Bitbucket Pipelines.
+
+Production-ready Node.js Express API for AWS ECS Fargate. Includes health check, structured JSON logging, graceful shutdown, and a Bitbucket CI/CD pipeline.
+
+## Files
+
+app.js
+Express API — /health for ALB polling, /api/v1/hello as sample route, SIGTERM handler for clean shutdown
+
+Dockerfile
+Multi-stage build — builder installs deps, runtime runs as non-root user with built-in HEALTHCHECK
+
+package.json
+Minimal manifest — only express dependency
+
+bitbucket-pipelines.yml
+On push to main: builds image → pushes to ECR → updates ECS task definition → rolling deploy → waits for stable
+
+## Endpoints
+
+GET /health
+Health check — returns { status: "healthy", timestamp }
+
+GET /api/v1/hello
+Sample route — returns environment name
+
+## Local Dev
+
+```bash
+npm install
+node app.js
+
+# or with Docker
+docker build -t fargate-express-blueprint .
+docker run -p 3000:3000 -e APP_ENV=dev fargate-express-blueprint
+```
+
+## CI/CD Variables
+
+**Repository Variables:**
+
+AWS_DEFAULT_REGION = ap-south-1
+AWS_ACCOUNT_ID = 123456789012
+ECR_REPO_NAME = node-api-prod
+ECS_CLUSTER = node-api-cluster
+CONTAINER_NAME = node-api-container
+
+**Production Deployment Variables** *(mark AWS keys as secret)*:
+
+AWS_ACCESS_KEY_ID = AKIA...
+AWS_SECRET_ACCESS_KEY = wJalr...
+ECS_SERVICE_NAME = node-api-svc
+TASK_DEFINITION_FAMILY = node-api-td
+APP_ENV = production
+
+## Related
+
+Infrastructure (VPC, ECS cluster, ALB, API Gateway) → [`aws-ecs-fargate-infra`](https://github.com/your-org/aws-ecs-fargate-infra)
