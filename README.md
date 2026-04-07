@@ -4,11 +4,11 @@ Production-ready Node.js Express API for AWS ECS Fargate. Includes health check,
 
 ## Files
 
-app.js : Express API — /health for ALB polling, /api/v1/hello as sample route, SIGTERM handler for clean shutdown
+app.js : Express API - /health for ALB polling, /api/v1/hello as sample route, SIGTERM handler for clean shutdown
 
-package.json : Minimal manifest — only express dependency
+package.json : Minimal manifest - only express dependency
 
-Dockerfile : Multi-stage build — builder installs deps, runtime runs as non-root user with built-in HEALTHCHECK
+Dockerfile : Multi-stage build - builder installs deps, runtime runs as non-root user with built-in HEALTHCHECK
 
 bitbucket-pipelines.yml : On push to main: builds image → pushes to ECR → updates ECS task definition → rolling deploy → waits for stable
 
