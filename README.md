@@ -53,4 +53,4 @@ docker run -p 3000:3000 -e APP_ENV=dev fargate-express-blueprint
 
 ## Related
 
-Infrastructure (VPC, ECS cluster, ALB, API Gateway) → [`aws-ecs-fargate-infra`](https://github.com/your-org/aws-ecs-fargate-infra)
+Infrastructure (VPC, ECS cluster, ALB, API Gateway) → [`aws-ecs-fargate-infra`](https://github.com/Divyap8/fargate-express-blueprint.git)
