@@ -1,4 +1,4 @@
-<img width="871" height="486" alt="image" src="https://github.com/user-attachments/assets/ffb52453-cc91-4696-a878-960d0f198ced" /># fargate-express-blueprint
+# fargate-express-blueprint
 
 Production-ready Node.js Express API for AWS ECS Fargate. Includes health check, structured JSON logging, graceful shutdown, and a Bitbucket CI/CD pipeline.
 
